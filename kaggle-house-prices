@@ -1,0 +1,67 @@
+import pandas as pd
+import kaggle
+import os
+from zipfile import ZipFile
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+
+def kaggle_competition(competition):
+    comp_folder = os.path.join('./tmp/',competition)
+    kapi = kaggle.KaggleApi()
+    kapi.authenticate()
+    kapi.competition_download_files(competition, comp_folder)
+    ZipFile(os.path.join(comp_folder,"{}.zip".format(competition))).extractall(comp_folder)
+
+
+def to_df(file_path):
+    """ Convert full file to a DataFrame """
+    return pd.read_csv(file_path, parse_dates=True)
+
+
+def scatter(x, y):
+    data = pd.concat([df[y], df[x]], axis=1)
+    plt = data.plot.scatter(x=x, y=y, ylim=(0, 800000))
+    fig = plt.get_figure()
+    fig.savefig("./tmp/house-prices-advanced-regression-techniques/{}-{}.png".format(x,y))
+
+
+if __name__ == '__main__':
+
+    kaggle_competition('house-prices-advanced-regression-techniques')
+    df = to_df('./tmp/house-prices-advanced-regression-techniques/train.csv')
+    print(df.columns)
+    print(df['SalePrice'].describe())
+
+    plot = sns.distplot(df['SalePrice'])
+    fig = plot.get_figure()
+    fig.savefig("./tmp/house-prices-advanced-regression-techniques/price-dist.png")
+
+    print('Skew ', df['SalePrice'].skew())
+    print('Kurtosis ', df['SalePrice'].kurt())
+
+    scatter('GrLivArea', 'SalePrice')
+    scatter('TotalBsmtSF', 'SalePrice')
+
+    #box plot overallqual/saleprice
+    var = 'OverallQual'
+    data = pd.concat([df['SalePrice'], df[var]], axis=1)
+    f, ax = plt.subplots(figsize=(8, 6))
+    boxplot = sns.boxplot(x=var, y="SalePrice", data=data)
+    boxplot.axis(ymin=0, ymax=800000)
+    fig = boxplot.get_figure()
+    fig.savefig("./tmp/house-prices-advanced-regression-techniques/qual.png")
+
+    # correlation matrix
+    corrmat = df.corr()
+    f, ax = plt.subplots(figsize=(12, 9))
+    plot = sns.heatmap(corrmat, vmax=.8, square=True)
+    fig = plot.get_figure()
+    fig.savefig("./tmp/house-prices-advanced-regression-techniques/correlation.png")
+
+    #scatterplot
+    # sns.set()
+    cols = ['SalePrice', 'OverallQual', 'GrLivArea', 'GarageCars', 'TotalBsmtSF', 'FullBath', 'YearBuilt']
+    plot = sns.pairplot(df[cols], size = 2.5)
+    #fig = plot.get_figure()
+    plot.savefig("./tmp/house-prices-advanced-regression-techniques/pairs.png")
